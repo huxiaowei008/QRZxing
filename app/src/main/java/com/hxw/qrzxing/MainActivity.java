@@ -6,6 +6,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import com.hxw.qr.CameraSetting;
+import com.hxw.qr.DecodeFormatManager;
 import com.hxw.qr.ZxingView;
 
 public class MainActivity extends AppCompatActivity {

@@ -7,7 +7,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.hardware.Camera;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -22,12 +24,18 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
+import com.google.zxing.PlanarYUVLuminanceSource;
+import com.google.zxing.Result;
+import com.google.zxing.ResultPoint;
+import com.google.zxing.ResultPointCallback;
 import com.google.zxing.client.android.camera.CameraConfigurationUtils;
 
 import java.io.IOException;
 
 
 /**
+ * 主要视图
+ *
  * @author hxw
  * @date 2018/4/9.
  */
@@ -35,7 +43,10 @@ import java.io.IOException;
 public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private static final String TAG = ZxingView.class.getSimpleName();
     private static final int REQUEST_CODE = 1008;
-
+    /**
+     * 这里提供了预览框架，我们将其传递给注册的处理程序。确保清除处理程序，使它只接收一条消息。
+     */
+    private final PreviewCallback previewCallback = new PreviewCallback();
     private SurfaceView surfaceView;
     private Activity mActivity;
     /**
@@ -67,8 +78,24 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      */
     private Point previewSizeOnScreen;
     private boolean hasSurface;
-    private boolean previewing;//判断是否正在预览
-    private boolean initialized;//判断相机方向修正角度和合适的预览大小是否计算过
+    /**
+     * 判断是否正在预览
+     */
+    private boolean previewing;
+    /**
+     * 判断相机方向修正角度和合适的预览大小是否计算过
+     */
+    private boolean initialized;
+    /**
+     * 相机捕捉窗口的尺寸
+     */
+    private Rect framingRectInPreview;
+    /**
+     * 屏幕捕捉窗口的尺寸
+     */
+    private Rect framingRect;
+
+    private CaptureHandler handler;
 
     public ZxingView(@NonNull Context context) {
         this(context, null);
@@ -94,7 +121,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     }
 
     /**
-     * 模仿activity的生命周期########################################################################
+     * ######################模仿activity的生命周期##################################################
      */
     public void onCreate(Activity activity, CameraSetting cameraSetting) {
         mActivity = activity;
@@ -115,7 +142,10 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     }
 
     public void onPause() {
-
+        if (handler != null) {
+            handler.quitSynchronously();
+            handler = null;
+        }
         closeDriver();
         if (!hasSurface) {
             surfaceView.getHolder().removeCallback(this);
@@ -171,13 +201,18 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             if (mCamera == null) {
                 openDriver(surfaceHolder);
             }
-
-
+            if (handler == null) {
+                handler = new CaptureHandler(this, new ResultPointCallback() {
+                    @Override
+                    public void foundPossibleResultPoint(ResultPoint point) {
+//                        viewfinderView.addPossibleResultPoint(point);
+                    }
+                }, mCameraSetting.getDecodeFormats());
+            }
         } catch (Exception e) {
             Log.w(TAG, e);
             displayFrameworkBugMessageAndExit();
         }
-
     }
 
     /**
@@ -285,6 +320,9 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         if (mCamera != null) {
             mCamera.release();
             mCamera = null;
+            //每次我们关闭相机的时候一定要清除这些，这样任何扫描尺寸的请求都可以被遗忘。
+            framingRect = null;
+            framingRectInPreview = null;
         }
     }
 
@@ -433,15 +471,22 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     /**
      * 开始预览
      */
-    private synchronized void startPreview(){
-
+    synchronized void startPreview() {
+        if (mCamera != null && !previewing) {
+            mCamera.startPreview();
+            previewing = true;
+        }
     }
 
     /**
      * 停止预览
      */
-    public synchronized void stopPreview() {
-
+    synchronized void stopPreview() {
+        if (mCamera != null && previewing) {
+            mCamera.stopPreview();
+            previewCallback.setHandler(null, 0, null);
+            previewing = false;
+        }
     }
 
     /**
@@ -473,6 +518,121 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             } else {
                 displayFrameworkBugMessageAndExit();
             }
+        }
+    }
+
+    //##############################################################################################
+
+    /**
+     * #######################提供给外部和内部操作的方法####################################################
+     */
+    /**
+     * Calculates the framing rect which the UI should draw to show the user where to place the
+     * barcode. This target helps with alignment as well as forces the user to hold the device
+     * far enough away to ensure the image will be in focus.
+     * 计算框架rect, UI应该向用户显示在哪里放置条形码。这个目标有助于对齐，
+     * 并迫使用户将设备保持得足够远，以确保图像的焦点。(屏幕捕捉窗口大小)
+     *
+     * @return The rectangle to draw on screen in window coordinates.
+     */
+    synchronized Rect getFramingRect() {
+        if (framingRect == null) {
+
+        }
+        return framingRect;
+    }
+
+    /**
+     * Like {@link #getFramingRect} but coordinates are in terms of the preview frame,
+     * not UI / screen.
+     * 是内部捕捉画面的窗口大小(相机捕捉窗口的大小),不是屏幕上显示的捕捉窗口大小
+     *
+     * @return {@link Rect} expressing barcode scan area in terms of the preview size
+     */
+    synchronized Rect getFramingRectInPreview() {
+        if (framingRectInPreview == null) {
+            //屏幕上显示的捕捉窗口大小
+            Rect framingRect = getFramingRect();
+            if (framingRect == null) {
+                return null;
+            }
+            Rect rect = new Rect(framingRect);
+            //相机显示的分辨率
+            Point cameraResolution = previewSizeOnScreen;
+            //屏幕显示的分辨率
+            Point screenResolution = this.screenResolution;
+            if (cameraResolution == null || screenResolution == null) {
+                // Called early, before init even finished
+                return null;
+            }
+            rect.left = rect.left * cameraResolution.x / screenResolution.x;
+            rect.right = rect.right * cameraResolution.x / screenResolution.x;
+            rect.top = rect.top * cameraResolution.y / screenResolution.y;
+            rect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
+            framingRectInPreview = rect;
+        }
+        return framingRectInPreview;
+    }
+
+    /**
+     * A single preview frame will be returned to the handler supplied. The data will arrive as byte[]
+     * in the message.obj field, with width and height encoded as message.arg1 and message.arg2,
+     * respectively.
+     *
+     * @param handler The handler to send the message to.
+     * @param message The what field of the message to be sent.
+     */
+    synchronized void requestPreviewFrame(Handler handler, int message) {
+        if (mCamera != null && previewing) {
+            previewCallback.setHandler(handler, message, bestPreviewSize);
+            mCamera.setOneShotPreviewCallback(previewCallback);
+        }
+    }
+
+    /**
+     * A factory method to build the appropriate LuminanceSource object based on the format
+     * of the preview buffers, as described by Camera.Parameters.
+     * 一种工厂方法，它基于预览缓冲区的格式来构建合适的LuminanceSource对象，如Camera.Parameters所描述的那样。
+     *
+     * @param data   A preview frame.
+     * @param width  The width of the image.
+     * @param height The height of the image.
+     * @return A PlanarYUVLuminanceSource instance.
+     */
+    PlanarYUVLuminanceSource buildLuminanceSource(byte[] data, int width, int height) {
+        Rect rect = getFramingRectInPreview();
+        if (rect == null) {
+            return null;
+        }
+        // Go ahead and assume it's YUV rather than die.
+        return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top,
+                rect.width(), rect.height(), false);
+    }
+
+    Handler getCaptureHandler() {
+        return handler;
+    }
+
+    /**
+     * 处理解码
+     *
+     * @param rawResult 解码结果
+     */
+    void handleDecode(Result rawResult) {
+        CameraSetting.ZxingResultListener listener = mCameraSetting.getListener();
+        if (listener != null) {
+            listener.result(rawResult.getText());
+        }
+    }
+
+    /**
+     * 延迟重启预览
+     *
+     * @param delayMS 延迟时间
+     */
+    public void restartPreviewAfterDelay(long delayMS) {
+        if (handler != null) {
+            handler.sendEmptyMessageDelayed(CameraConstant.restart_preview, delayMS);
         }
     }
 
