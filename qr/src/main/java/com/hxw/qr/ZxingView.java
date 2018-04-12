@@ -43,11 +43,16 @@ import java.io.IOException;
 public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private static final String TAG = ZxingView.class.getSimpleName();
     private static final int REQUEST_CODE = 1008;
+    private static final int MIN_FRAME_WIDTH = 240;
+    private static final int MIN_FRAME_HEIGHT = 240;
+    private static final int MAX_FRAME_WIDTH = 1200; // = 5/8 * 1920
+    private static final int MAX_FRAME_HEIGHT = 675; // = 5/8 * 1080
     /**
      * 这里提供了预览框架，我们将其传递给注册的处理程序。确保清除处理程序，使它只接收一条消息。
      */
     private final PreviewCallback previewCallback = new PreviewCallback();
     private SurfaceView surfaceView;
+    private ViewfinderView viewfinderView;
     private Activity mActivity;
     /**
      * 开放出来的相机的设置属性
@@ -115,9 +120,12 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      */
     private void initView(Context context, AttributeSet attrs) {
         surfaceView = new SurfaceView(context, attrs);
+        viewfinderView = new ViewfinderView(context, attrs);
         ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(ViewGroup
                 .LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         addView(surfaceView, layoutParams);
+        addView(viewfinderView, layoutParams);
+        viewfinderView.setManager(this);
     }
 
     /**
@@ -205,7 +213,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
                 handler = new CaptureHandler(this, new ResultPointCallback() {
                     @Override
                     public void foundPossibleResultPoint(ResultPoint point) {
-//                        viewfinderView.addPossibleResultPoint(point);
+                        viewfinderView.addPossibleResultPoint(point);
                     }
                 }, mCameraSetting.getDecodeFormats());
             }
@@ -537,9 +545,34 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      */
     synchronized Rect getFramingRect() {
         if (framingRect == null) {
+            if (mCamera == null) {
+                return null;
+            }
+            Point screenResolution = this.screenResolution;
+            if (screenResolution == null) {
+                // Called early, before init even finished
+                return null;
+            }
+            int width = findDesiredDimensionInRange(screenResolution.x, MIN_FRAME_WIDTH, MAX_FRAME_WIDTH);
+            int height = findDesiredDimensionInRange(screenResolution.y, MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
 
+            int leftOffset = (screenResolution.x - width) / 2;
+            int topOffset = (screenResolution.y - height) / 2;
+            framingRect = new Rect(leftOffset, topOffset, leftOffset + width, topOffset + height);
+            Log.d(TAG, "计算出屏幕捕捉窗口的大小: " + framingRect);
         }
         return framingRect;
+    }
+
+    private static int findDesiredDimensionInRange(int resolution, int hardMin, int hardMax) {
+        int dim = 5 * resolution / 8; // Target 5/8 of each dimension
+        if (dim < hardMin) {
+            return hardMin;
+        }
+        if (dim > hardMax) {
+            return hardMax;
+        }
+        return dim;
     }
 
     /**
@@ -558,7 +591,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             }
             Rect rect = new Rect(framingRect);
             //相机显示的分辨率
-            Point cameraResolution = previewSizeOnScreen;
+            Point cameraResolution = bestPreviewSize;
             //屏幕显示的分辨率
             Point screenResolution = this.screenResolution;
             if (cameraResolution == null || screenResolution == null) {

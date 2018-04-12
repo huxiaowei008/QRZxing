@@ -6,7 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import com.hxw.qr.CameraSetting;
-import com.hxw.qr.DecodeFormatManager;
 import com.hxw.qr.ZxingView;
 
 public class MainActivity extends AppCompatActivity {
@@ -22,7 +21,14 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "onCreate");
         zxingView = findViewById(R.id.zxing);
 
-        zxingView.onCreate(this, new CameraSetting());
+        zxingView.onCreate(this, new CameraSetting()
+                .setOnResultListener(new CameraSetting.ZxingResultListener() {
+                    @Override
+                    public void result(CharSequence result) {
+                            Log.d(TAG,"解码结果："+result.toString());
+                            zxingView.restartPreviewAfterDelay(500);
+                    }
+                }));
     }
 
     @Override
