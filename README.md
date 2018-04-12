@@ -1,0 +1,2 @@
+# QRZxing
+zxing封装
