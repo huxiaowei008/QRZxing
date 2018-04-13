@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import com.hxw.qr.CameraSetting;
@@ -29,10 +30,18 @@ public class MainActivity extends AppCompatActivity {
                     public void result(CharSequence result) {
                         Log.d(TAG, "解码结果：" + result.toString());
                         Toast.makeText(MainActivity.this, result.toString(), Toast.LENGTH_SHORT).show();
-                        zxingView.restartPreviewAfterDelay(500);
+
                     }
                 }).setVibrate(true)
-        .setLightMode(FrontLightMode.AUTO));
+                .setPlayBeep(false)
+                .setLightMode(FrontLightMode.OFF));
+
+        findViewById(R.id.btn_restart).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                zxingView.restartPreviewAfterDelay(500);
+            }
+        });
     }
 
     @Override

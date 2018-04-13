@@ -1,5 +1,7 @@
 package com.hxw.qr;
 
+import android.graphics.Bitmap;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -13,6 +15,7 @@ import com.google.zxing.ReaderException;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 
+import java.io.ByteArrayOutputStream;
 import java.util.Map;
 
 /**
@@ -21,6 +24,8 @@ import java.util.Map;
  */
 
 final class DecodeHandler extends Handler {
+    static final String BARCODE_BITMAP = "barcode_bitmap";
+    static final String BARCODE_SCALED_FACTOR = "barcode_scaled_factor";
     private static final String TAG = DecodeHandler.class.getSimpleName();
     private final MultiFormatReader multiFormatReader;
     private final ZxingView zxingView;
@@ -31,6 +36,17 @@ final class DecodeHandler extends Handler {
         multiFormatReader.setHints(hints);
 
         this.zxingView = zxingView;
+    }
+
+    private static void bundleThumbnail(PlanarYUVLuminanceSource source, Bundle bundle) {
+        int[] pixels = source.renderThumbnail();
+        int width = source.getThumbnailWidth();
+        int height = source.getThumbnailHeight();
+        Bitmap bitmap = Bitmap.createBitmap(pixels, 0, width, width, height, Bitmap.Config.ARGB_8888);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, out);
+        bundle.putByteArray(DecodeHandler.BARCODE_BITMAP, out.toByteArray());
+        bundle.putFloat(DecodeHandler.BARCODE_SCALED_FACTOR, (float) width / source.getWidth());
     }
 
     @Override
@@ -75,13 +91,20 @@ final class DecodeHandler extends Handler {
             }
         }
         long end = System.currentTimeMillis();
-//        Log.d(TAG, "解码时间: " + (end - start) + " ms");
+
         Handler handler = zxingView.getCaptureHandler();
-        if (handler!=null) {
+        if (handler != null) {
             if (rawResult != null) {
+                Log.d(TAG, "解码时间: " + (end - start) + " ms");
                 Message message = Message.obtain(handler, CameraConstant.decode_succeeded, rawResult);
+
+                //注释掉的是图片数据的建立,测试时可能会用,通常用不到
+//                Bundle bundle = new Bundle();
+//                bundleThumbnail(source, bundle);
+//                message.setData(bundle);
+
                 message.sendToTarget();
-            }else {
+            } else {
                 Message message = Message.obtain(handler, CameraConstant.decode_failed);
                 message.sendToTarget();
             }

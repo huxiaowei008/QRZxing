@@ -1,5 +1,6 @@
 package com.hxw.qr;
 
+import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Message;
 
@@ -42,7 +43,21 @@ public final class CaptureHandler extends Handler {
                 break;
             case CameraConstant.decode_succeeded:
                 state = State.SUCCESS;
-                zxingView.handleDecode((Result) msg.obj);
+//注释掉的是图片数据的获取,测试时有用,通常时用不到的
+//                Bundle bundle = msg.getData();
+                Bitmap barcode = null;
+                float scaleFactor = 1.0f;
+//                if (bundle != null) {
+//                    byte[] compressedBitmap = bundle.getByteArray(DecodeHandler.BARCODE_BITMAP);
+//                    if (compressedBitmap != null) {
+//                        barcode = BitmapFactory.decodeByteArray(compressedBitmap, 0, compressedBitmap.length, null);
+//                        // Mutable copy:
+//                        barcode = barcode.copy(Bitmap.Config.ARGB_8888, true);
+//                    }
+//                    scaleFactor = bundle.getFloat(DecodeHandler.BARCODE_SCALED_FACTOR);
+//                }
+
+                zxingView.handleDecode((Result) msg.obj, barcode, scaleFactor);
                 break;
             case CameraConstant.decode_failed:
                 //我们正在尽可能快地解码，所以当一个解码失败时，启动另一个
@@ -54,7 +69,7 @@ public final class CaptureHandler extends Handler {
         }
     }
 
-    void quitSynchronously(){
+    void quitSynchronously() {
         state = State.DONE;
         zxingView.stopPreview();
         Message quit = Message.obtain(decodeThread.getHandler(), CameraConstant.quit);
@@ -78,7 +93,6 @@ public final class CaptureHandler extends Handler {
         if (state == State.SUCCESS) {
             state = State.PREVIEW;
             zxingView.requestPreviewFrame(decodeThread.getHandler(), CameraConstant.decode);
-//            activity.drawViewfinder();
         }
     }
 

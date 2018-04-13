@@ -6,8 +6,11 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Point;
-import android.graphics.Rect;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -24,6 +27,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
+import com.google.zxing.BarcodeFormat;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.ResultPoint;
@@ -43,10 +47,6 @@ import java.io.IOException;
 public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private static final String TAG = ZxingView.class.getSimpleName();
     private static final int REQUEST_CODE = 1008;
-    private static final int MIN_FRAME_WIDTH = 240;
-    private static final int MIN_FRAME_HEIGHT = 240;
-    private static final int MAX_FRAME_WIDTH = 1200; // = 5/8 * 1920
-    private static final int MAX_FRAME_HEIGHT = 675; // = 5/8 * 1080
 
     /**
      * 这里提供了预览框架，我们将其传递给注册的处理程序。确保清除处理程序，使它只接收一条消息。
@@ -72,10 +72,6 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      */
     private int cwNeededRotation;
     /**
-     * 屏幕的分辨率
-     */
-    private Point screenResolution;
-    /**
      * 相机的最佳分辨率，最佳预览尺寸
      */
     private Point cameraResolution;
@@ -88,27 +84,16 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      * 判断相机方向修正角度和合适的预览大小是否计算过
      */
     private boolean initialized;
-    /**
-     * 相机捕捉窗口的尺寸
-     */
-    private Rect framingRectInPreview;
-    /**
-     * 屏幕捕捉窗口的尺寸
-     */
-    private Rect framingRect;
 
     private CaptureHandler handler;
-
     /**
      * 声音和震动管理
      */
     private BeepManager beepManager;
-
     /**
      * 灯光管理
      */
     private AmbientLightManager ambientLightManager;
-
     /**
      * 自动对焦管理
      */
@@ -124,21 +109,23 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
 
     public ZxingView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        initView(context, attrs);
     }
 
 
     /**
      * 初始化需要的视图
      */
-    private void initView(Context context, AttributeSet attrs) {
-        surfaceView = new SurfaceView(context, attrs);
-        viewfinderView = new ViewfinderView(context, attrs);
+    private void initView(Context context, ViewfinderView view) {
+        surfaceView = new SurfaceView(context);
+        viewfinderView = view;
+        if (viewfinderView == null) {
+            viewfinderView = new ViewfinderView(context);
+        }
         ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(ViewGroup
                 .LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         addView(surfaceView, layoutParams);
         addView(viewfinderView, layoutParams);
-        viewfinderView.setManager(this);
+
     }
 
     /**
@@ -150,6 +137,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         beepManager = new BeepManager(activity, cameraSetting);
         ambientLightManager = new AmbientLightManager(activity, this,
                 cameraSetting.getLightMode());
+        initView(activity, cameraSetting.getViewfinderView());
         hasSurface = false;
     }
 
@@ -349,9 +337,6 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         if (mCamera != null) {
             mCamera.release();
             mCamera = null;
-            //每次我们关闭相机的时候一定要清除这些，这样任何扫描尺寸的请求都可以被遗忘。
-            framingRect = null;
-            framingRectInPreview = null;
         }
     }
 
@@ -410,7 +395,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      * 寻找合适的预览尺寸
      */
     private void initPreviewSize(Display display, Camera camera) {
-        screenResolution = new Point();
+        Point screenResolution = new Point();
         display.getSize(screenResolution);
         Log.i(TAG, "当前方向的屏幕分辨率: " + screenResolution);
 
@@ -506,7 +491,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         if (mCamera != null && !previewing) {
             mCamera.startPreview();
             previewing = true;
-            autoFocusManager = new AutoFocusManager(mCamera,mCameraSetting.isAutoFocus());
+            autoFocusManager = new AutoFocusManager(mCamera, mCameraSetting.isAutoFocus());
             autoFocusManager.start();
         }
     }
@@ -565,86 +550,6 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     }
 
     /**
-     * 屏幕捕捉窗口的大小
-     *
-     * @return The rectangle to draw on screen in window coordinates.
-     */
-    synchronized Rect getFramingRect() {
-        if (framingRect == null) {
-            if (mCamera == null) {
-                return null;
-            }
-            Point screenResolution = this.screenResolution;
-            if (screenResolution == null) {
-                // Called early, before init even finished
-                return null;
-            }
-            int width = findDesiredDimensionInRange(screenResolution.x, MIN_FRAME_WIDTH, MAX_FRAME_WIDTH);
-            int height = findDesiredDimensionInRange(screenResolution.y, MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
-
-            int leftOffset = (screenResolution.x - width) / 2;
-            int topOffset = (screenResolution.y - height) / 2;
-            framingRect = new Rect(leftOffset, topOffset, leftOffset + width, topOffset + height);
-            Log.d(TAG, "计算出屏幕捕捉窗口的大小: " + framingRect);
-        }
-        return framingRect;
-    }
-
-    private int findDesiredDimensionInRange(int resolution, int hardMin, int hardMax) {
-        int dim = 5 * resolution / 8; // Target 5/8 of each dimension
-        if (dim < hardMin) {
-            return hardMin;
-        }
-        if (dim > hardMax) {
-            return hardMax;
-        }
-        return dim;
-    }
-
-    /**
-     * 相机捕捉窗口大小
-     */
-    synchronized Rect getFramingRectInPreview() {
-        if (framingRectInPreview == null) {
-            //相机上显示的捕捉窗口大小
-            Rect framingRect = getFramingRect();
-            if (framingRect == null) {
-                return null;
-            }
-            Rect rect = new Rect(framingRect);
-            //相机显示的分辨率
-            Point cameraResolution = this.cameraResolution;
-            //屏幕显示的分辨率
-            Point screenResolution = this.screenResolution;
-            if (cameraResolution == null || screenResolution == null) {
-                // Called early, before init even finished
-                return null;
-            }
-            framingRect = new Rect(rect);
-            boolean isScreenPortrait = screenResolution.x < screenResolution.y;
-            boolean isPreviewSizePortrait = cameraResolution.x < cameraResolution.y;
-
-//            if (isScreenPortrait == isPreviewSizePortrait) {
-//                framingRect.left = rect.left * cameraResolution.x / screenResolution.x;
-//                framingRect.right = rect.right * cameraResolution.x / screenResolution.x;
-//                framingRect.top = rect.top * cameraResolution.y / screenResolution.y;
-//                framingRect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
-//            } else {
-//                framingRect.left = rect.top * cameraResolution.x / screenResolution.y;
-//                framingRect.right = rect.bottom * cameraResolution.x / screenResolution.y;
-//                framingRect.top = rect.left * cameraResolution.y / screenResolution.x;
-//                framingRect.bottom = rect.right * cameraResolution.y / screenResolution.x;
-//            }
-            rect.left = rect.left * cameraResolution.x / screenResolution.x;
-            rect.right = rect.right * cameraResolution.x / screenResolution.x;
-            rect.top = rect.top * cameraResolution.y / screenResolution.y;
-            rect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
-            framingRectInPreview = rect;
-        }
-        return framingRectInPreview;
-    }
-
-    /**
      * A single preview frame will be returned to the handler supplied. The data will arrive as byte[]
      * in the message.obj field, with width and height encoded as message.arg1 and message.arg2,
      * respectively.
@@ -657,6 +562,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             previewCallback.setHandler(handler, message, cameraResolution);
             mCamera.setOneShotPreviewCallback(previewCallback);
         }
+        viewfinderView.drawViewfinder();
     }
 
     /**
@@ -670,10 +576,6 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      * @return A PlanarYUVLuminanceSource instance.
      */
     PlanarYUVLuminanceSource buildLuminanceSource(byte[] data, int width, int height) {
-        Rect rect = getFramingRectInPreview();
-        if (rect == null) {
-            return null;
-        }
         // Go ahead and assume it's YUV rather than die.
         return new PlanarYUVLuminanceSource(data, width, height, 0, 0,
                 width, height, false);
@@ -688,9 +590,13 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      *
      * @param rawResult 解码结果
      */
-    void handleDecode(Result rawResult) {
+    void handleDecode(Result rawResult, Bitmap barcode, float scaleFactor) {
         beepManager.playBeepSoundAndVibrate();
 
+        if (barcode != null) {
+            drawResultPoints(barcode, scaleFactor, rawResult);
+            viewfinderView.drawResultBitmap(barcode);
+        }
         CameraSetting.ZxingResultListener listener = mCameraSetting.getListener();
         if (listener != null) {
             listener.result(rawResult.getText());
@@ -731,4 +637,48 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         }
     }
     //##############################################################################################
+
+    /**
+     * 绘制关键特征点
+     *
+     * @param barcode     A bitmap of the captured image.
+     * @param scaleFactor amount by which thumbnail was scaled
+     * @param rawResult   The decoded results which contains the points to draw.
+     */
+    private void drawResultPoints(Bitmap barcode, float scaleFactor, Result rawResult) {
+        ResultPoint[] points = rawResult.getResultPoints();
+        if (points != null && points.length > 0) {
+            Canvas canvas = new Canvas(barcode);
+            Paint paint = new Paint();
+            paint.setColor(Color.parseColor("#c099cc00"));
+            if (points.length == 2) {
+                paint.setStrokeWidth(4.0f);
+                drawLine(canvas, paint, points[0], points[1], scaleFactor);
+            } else if (points.length == 4 &&
+                    (rawResult.getBarcodeFormat() == BarcodeFormat.UPC_A ||
+                            rawResult.getBarcodeFormat() == BarcodeFormat.EAN_13)) {
+                // Hacky special case -- draw two lines, for the barcode and metadata
+                drawLine(canvas, paint, points[0], points[1], scaleFactor);
+                drawLine(canvas, paint, points[2], points[3], scaleFactor);
+            } else {
+                paint.setStrokeWidth(10.0f);
+                for (ResultPoint point : points) {
+                    if (point != null) {
+                        canvas.drawPoint(scaleFactor * point.getX(), scaleFactor * point.getY(), paint);
+                    }
+                }
+            }
+        }
+    }
+
+    private void drawLine(Canvas canvas, Paint paint, ResultPoint a, ResultPoint b, float scaleFactor) {
+        if (a != null && b != null) {
+            canvas.drawLine(scaleFactor * a.getX(),
+                    scaleFactor * a.getY(),
+                    scaleFactor * b.getX(),
+                    scaleFactor * b.getY(),
+                    paint);
+        }
+    }
+
 }

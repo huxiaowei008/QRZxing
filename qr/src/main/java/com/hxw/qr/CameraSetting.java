@@ -1,7 +1,5 @@
 package com.hxw.qr;
 
-import android.hardware.Camera;
-
 import com.google.zxing.BarcodeFormat;
 
 import java.util.Collection;
@@ -18,7 +16,7 @@ public class CameraSetting {
     /**
      * 解码后的结果监听
      */
-    public ZxingResultListener listener = null;
+    private ZxingResultListener listener = null;
     /**
      * 不曝光
      */
@@ -64,6 +62,8 @@ public class CameraSetting {
      * 是否震动(需要权限)
      */
     private boolean vibrate = false;
+
+    private ViewfinderView viewfinderView= null;
 
     public boolean isDisExposure() {
         return disExposure;
@@ -175,6 +175,15 @@ public class CameraSetting {
 
     public CameraSetting setVibrate(boolean vibrate) {
         this.vibrate = vibrate;
+        return this;
+    }
+
+    public ViewfinderView getViewfinderView() {
+        return viewfinderView;
+    }
+
+    public CameraSetting setViewfinderView(ViewfinderView view) {
+        this.viewfinderView = view;
         return this;
     }
 
