@@ -75,7 +75,7 @@ final class DecodeHandler extends Handler {
             }
         }
         long end = System.currentTimeMillis();
-        Log.d(TAG, "解码时间: " + (end - start) + " ms");
+//        Log.d(TAG, "解码时间: " + (end - start) + " ms");
         Handler handler = zxingView.getCaptureHandler();
         if (handler!=null) {
             if (rawResult != null) {

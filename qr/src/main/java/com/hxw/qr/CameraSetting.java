@@ -50,11 +50,20 @@ public class CameraSetting {
     /**
      * 灯光模式
      */
-    private String lightMode = Camera.Parameters.FLASH_MODE_OFF;
+    private FrontLightMode lightMode = FrontLightMode.OFF;
     /**
      * 解码类型,默认就一个二维码
      */
     private Collection<BarcodeFormat> decodeFormats = DecodeFormatManager.QR_CODE_FORMATS;
+
+    /**
+     * 打开提示音是否成功
+     */
+    private boolean playBeep = true;
+    /**
+     * 是否震动(需要权限)
+     */
+    private boolean vibrate = false;
 
     public boolean isDisExposure() {
         return disExposure;
@@ -119,11 +128,11 @@ public class CameraSetting {
         return this;
     }
 
-    public String getLightMode() {
+    public FrontLightMode getLightMode() {
         return lightMode;
     }
 
-    public CameraSetting setLightMode(String lightMode) {
+    public CameraSetting setLightMode(FrontLightMode lightMode) {
         this.lightMode = lightMode;
         return this;
     }
@@ -148,6 +157,24 @@ public class CameraSetting {
 
     public CameraSetting setOnResultListener(ZxingResultListener listener) {
         this.listener = listener;
+        return this;
+    }
+
+    public boolean isPlayBeep() {
+        return playBeep;
+    }
+
+    public CameraSetting setPlayBeep(boolean playBeep) {
+        this.playBeep = playBeep;
+        return this;
+    }
+
+    public boolean isVibrate() {
+        return vibrate;
+    }
+
+    public CameraSetting setVibrate(boolean vibrate) {
+        this.vibrate = vibrate;
         return this;
     }
 

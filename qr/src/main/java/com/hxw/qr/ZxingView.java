@@ -47,6 +47,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private static final int MIN_FRAME_HEIGHT = 240;
     private static final int MAX_FRAME_WIDTH = 1200; // = 5/8 * 1920
     private static final int MAX_FRAME_HEIGHT = 675; // = 5/8 * 1080
+
     /**
      * 这里提供了预览框架，我们将其传递给注册的处理程序。确保清除处理程序，使它只接收一条消息。
      */
@@ -77,11 +78,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     /**
      * 相机的最佳分辨率，最佳预览尺寸
      */
-    private Point bestPreviewSize;
-    /**
-     * 在屏幕上预览的尺寸
-     */
-    private Point previewSizeOnScreen;
+    private Point cameraResolution;
     private boolean hasSurface;
     /**
      * 判断是否正在预览
@@ -102,6 +99,21 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
 
     private CaptureHandler handler;
 
+    /**
+     * 声音和震动管理
+     */
+    private BeepManager beepManager;
+
+    /**
+     * 灯光管理
+     */
+    private AmbientLightManager ambientLightManager;
+
+    /**
+     * 自动对焦管理
+     */
+    private AutoFocusManager autoFocusManager;
+
     public ZxingView(@NonNull Context context) {
         this(context, null);
     }
@@ -114,6 +126,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         super(context, attrs, defStyleAttr);
         initView(context, attrs);
     }
+
 
     /**
      * 初始化需要的视图
@@ -134,10 +147,15 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     public void onCreate(Activity activity, CameraSetting cameraSetting) {
         mActivity = activity;
         mCameraSetting = cameraSetting;
+        beepManager = new BeepManager(activity, cameraSetting);
+        ambientLightManager = new AmbientLightManager(activity, this,
+                cameraSetting.getLightMode());
         hasSurface = false;
     }
 
     public void onResume() {
+
+        ambientLightManager.start();
 
         if (hasSurface) {
             // The activity was paused but not stopped, so the surface still exists. Therefore
@@ -154,6 +172,9 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             handler.quitSynchronously();
             handler = null;
         }
+
+        ambientLightManager.stop();
+        beepManager.close();
         closeDriver();
         if (!hasSurface) {
             surfaceView.getHolder().removeCallback(this);
@@ -166,7 +187,6 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     }
 
     //##############################################################################################
-
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
@@ -191,6 +211,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     /**
      * #######################################相机操作###############################################
      */
+
     /**
      * 初始化相机
      */
@@ -393,19 +414,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         display.getSize(screenResolution);
         Log.i(TAG, "当前方向的屏幕分辨率: " + screenResolution);
 
-        bestPreviewSize = CameraConfigurationUtils.findBestPreviewSizeValue(camera.getParameters(), screenResolution);
-        Log.i(TAG, "最好的预览大小: " + bestPreviewSize);
-
-        boolean isScreenPortrait = screenResolution.x < screenResolution.y;
-        boolean isPreviewSizePortrait = bestPreviewSize.x < bestPreviewSize.y;
-
-        if (isScreenPortrait == isPreviewSizePortrait) {
-            previewSizeOnScreen = bestPreviewSize;
-        } else {
-            previewSizeOnScreen = new Point(bestPreviewSize.y, bestPreviewSize.x);
-        }
-        //previewSizeOnScreen是我们理解方向的尺寸,不一定是相机支持的尺寸,所以设置尺寸时还是要设置bestPreviewSize
-        Log.i(TAG, "在屏幕上的预览尺寸: " + previewSizeOnScreen);
+        cameraResolution = CameraConfigurationUtils.findBestPreviewSizeValue(camera.getParameters(), screenResolution);
+        Log.i(TAG, "最好的预览大小: " + cameraResolution);
     }
 
     /**
@@ -422,7 +432,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             Log.w(TAG, "在相机配置安全模式下----大多数设置都不会被授予");
         }
 
-        boolean currentSetting = cameraSetting.getLightMode().equals(Camera.Parameters.FLASH_MODE_ON);
+        boolean currentSetting = cameraSetting.getLightMode() == FrontLightMode.ON;
         doSetTorch(parameters, currentSetting, safeMode, cameraSetting.isDisExposure());
 
         CameraConfigurationUtils.setFocus(
@@ -451,7 +461,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         parameters.setRecordingHint(true);
 
         //注意！！！这里设置的大小需要是相机支持的,交换x,y可能会导致不支持尺寸从而设置失败
-        parameters.setPreviewSize(bestPreviewSize.x, bestPreviewSize.y);
+        parameters.setPreviewSize(cameraResolution.x, cameraResolution.y);
 
         camera.setParameters(parameters);
 
@@ -459,11 +469,11 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
 
         Camera.Parameters afterParameters = camera.getParameters();
         Camera.Size afterSize = afterParameters.getPreviewSize();
-        if (afterSize != null && (bestPreviewSize.x != afterSize.width || bestPreviewSize.y != afterSize.height)) {
-            Log.w(TAG, "摄像头说它支持预览尺寸 " + bestPreviewSize.x + 'x' + bestPreviewSize.y +
+        if (afterSize != null && (cameraResolution.x != afterSize.width || cameraResolution.y != afterSize.height)) {
+            Log.w(TAG, "摄像头说它支持预览尺寸 " + cameraResolution.x + 'x' + cameraResolution.y +
                     ", but after setting it, preview size is " + afterSize.width + 'x' + afterSize.height);
-            bestPreviewSize.x = afterSize.width;
-            bestPreviewSize.y = afterSize.height;
+            cameraResolution.x = afterSize.width;
+            cameraResolution.y = afterSize.height;
         }
 
     }
@@ -476,6 +486,19 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         }
     }
 
+    private boolean getTorchState(Camera camera) {
+        if (camera != null) {
+            Camera.Parameters parameters = camera.getParameters();
+            if (parameters != null) {
+                String flashMode = parameters.getFlashMode();
+                return flashMode != null &&
+                        (Camera.Parameters.FLASH_MODE_ON.equals(flashMode) ||
+                                Camera.Parameters.FLASH_MODE_TORCH.equals(flashMode));
+            }
+        }
+        return false;
+    }
+
     /**
      * 开始预览
      */
@@ -483,6 +506,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         if (mCamera != null && !previewing) {
             mCamera.startPreview();
             previewing = true;
+            autoFocusManager = new AutoFocusManager(mCamera,mCameraSetting.isAutoFocus());
+            autoFocusManager.start();
         }
     }
 
@@ -490,6 +515,10 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      * 停止预览
      */
     synchronized void stopPreview() {
+        if (autoFocusManager != null) {
+            autoFocusManager.stop();
+            autoFocusManager = null;
+        }
         if (mCamera != null && previewing) {
             mCamera.stopPreview();
             previewCallback.setHandler(null, 0, null);
@@ -519,6 +548,12 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         builder.show();
     }
 
+    //##############################################################################################
+
+    /**
+     * #######################提供给外部和内部操作的方法####################################################
+     */
+
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == REQUEST_CODE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -529,17 +564,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         }
     }
 
-    //##############################################################################################
-
     /**
-     * #######################提供给外部和内部操作的方法####################################################
-     */
-    /**
-     * Calculates the framing rect which the UI should draw to show the user where to place the
-     * barcode. This target helps with alignment as well as forces the user to hold the device
-     * far enough away to ensure the image will be in focus.
-     * 计算框架rect, UI应该向用户显示在哪里放置条形码。这个目标有助于对齐，
-     * 并迫使用户将设备保持得足够远，以确保图像的焦点。(屏幕捕捉窗口大小)
+     * 屏幕捕捉窗口的大小
      *
      * @return The rectangle to draw on screen in window coordinates.
      */
@@ -564,7 +590,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         return framingRect;
     }
 
-    private static int findDesiredDimensionInRange(int resolution, int hardMin, int hardMax) {
+    private int findDesiredDimensionInRange(int resolution, int hardMin, int hardMax) {
         int dim = 5 * resolution / 8; // Target 5/8 of each dimension
         if (dim < hardMin) {
             return hardMin;
@@ -576,28 +602,39 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     }
 
     /**
-     * Like {@link #getFramingRect} but coordinates are in terms of the preview frame,
-     * not UI / screen.
-     * 是内部捕捉画面的窗口大小(相机捕捉窗口的大小),不是屏幕上显示的捕捉窗口大小
-     *
-     * @return {@link Rect} expressing barcode scan area in terms of the preview size
+     * 相机捕捉窗口大小
      */
     synchronized Rect getFramingRectInPreview() {
         if (framingRectInPreview == null) {
-            //屏幕上显示的捕捉窗口大小
+            //相机上显示的捕捉窗口大小
             Rect framingRect = getFramingRect();
             if (framingRect == null) {
                 return null;
             }
             Rect rect = new Rect(framingRect);
             //相机显示的分辨率
-            Point cameraResolution = bestPreviewSize;
+            Point cameraResolution = this.cameraResolution;
             //屏幕显示的分辨率
             Point screenResolution = this.screenResolution;
             if (cameraResolution == null || screenResolution == null) {
                 // Called early, before init even finished
                 return null;
             }
+            framingRect = new Rect(rect);
+            boolean isScreenPortrait = screenResolution.x < screenResolution.y;
+            boolean isPreviewSizePortrait = cameraResolution.x < cameraResolution.y;
+
+//            if (isScreenPortrait == isPreviewSizePortrait) {
+//                framingRect.left = rect.left * cameraResolution.x / screenResolution.x;
+//                framingRect.right = rect.right * cameraResolution.x / screenResolution.x;
+//                framingRect.top = rect.top * cameraResolution.y / screenResolution.y;
+//                framingRect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
+//            } else {
+//                framingRect.left = rect.top * cameraResolution.x / screenResolution.y;
+//                framingRect.right = rect.bottom * cameraResolution.x / screenResolution.y;
+//                framingRect.top = rect.left * cameraResolution.y / screenResolution.x;
+//                framingRect.bottom = rect.right * cameraResolution.y / screenResolution.x;
+//            }
             rect.left = rect.left * cameraResolution.x / screenResolution.x;
             rect.right = rect.right * cameraResolution.x / screenResolution.x;
             rect.top = rect.top * cameraResolution.y / screenResolution.y;
@@ -617,7 +654,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      */
     synchronized void requestPreviewFrame(Handler handler, int message) {
         if (mCamera != null && previewing) {
-            previewCallback.setHandler(handler, message, bestPreviewSize);
+            previewCallback.setHandler(handler, message, cameraResolution);
             mCamera.setOneShotPreviewCallback(previewCallback);
         }
     }
@@ -638,8 +675,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             return null;
         }
         // Go ahead and assume it's YUV rather than die.
-        return new PlanarYUVLuminanceSource(data, width, height, rect.left, rect.top,
-                rect.width(), rect.height(), false);
+        return new PlanarYUVLuminanceSource(data, width, height, 0, 0,
+                width, height, false);
     }
 
     Handler getCaptureHandler() {
@@ -652,6 +689,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      * @param rawResult 解码结果
      */
     void handleDecode(Result rawResult) {
+        beepManager.playBeepSoundAndVibrate();
+
         CameraSetting.ZxingResultListener listener = mCameraSetting.getListener();
         if (listener != null) {
             listener.result(rawResult.getText());
@@ -669,5 +708,27 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         }
     }
 
+    /**
+     * 灯光的开关
+     *
+     * @param newSetting if {@code true}, light should be turned on if currently off. And vice versa.
+     */
+    public synchronized void setTorch(boolean newSetting) {
+        if (mCamera != null && newSetting != getTorchState(mCamera)) {
+            boolean wasAutoFocusManager = autoFocusManager != null;
+            if (wasAutoFocusManager) {
+                autoFocusManager.stop();
+                autoFocusManager = null;
+            }
+            Camera.Parameters parameters = mCamera.getParameters();
+            doSetTorch(parameters, newSetting, false, mCameraSetting.isDisExposure());
+            mCamera.setParameters(parameters);
+
+            if (wasAutoFocusManager) {
+                autoFocusManager = new AutoFocusManager(mCamera, mCameraSetting.isAutoFocus());
+                autoFocusManager.start();
+            }
+        }
+    }
     //##############################################################################################
 }

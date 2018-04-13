@@ -4,8 +4,10 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.hxw.qr.CameraSetting;
+import com.hxw.qr.FrontLightMode;
 import com.hxw.qr.ZxingView;
 
 public class MainActivity extends AppCompatActivity {
@@ -25,10 +27,12 @@ public class MainActivity extends AppCompatActivity {
                 .setOnResultListener(new CameraSetting.ZxingResultListener() {
                     @Override
                     public void result(CharSequence result) {
-                            Log.d(TAG,"解码结果："+result.toString());
-                            zxingView.restartPreviewAfterDelay(500);
+                        Log.d(TAG, "解码结果：" + result.toString());
+                        Toast.makeText(MainActivity.this, result.toString(), Toast.LENGTH_SHORT).show();
+                        zxingView.restartPreviewAfterDelay(500);
                     }
-                }));
+                }).setVibrate(true)
+        .setLightMode(FrontLightMode.AUTO));
     }
 
     @Override

@@ -80,6 +80,12 @@ public class ViewfinderView extends View {
         float scaleX = frame.width() / (float) previewFrame.width();
         float scaleY = frame.height() / (float) previewFrame.height();
 
+        paint.setColor(Color.BLUE);
+        canvas.drawLine(previewFrame.left,previewFrame.top,previewFrame.left,previewFrame.bottom,paint);
+        canvas.drawLine(previewFrame.right,previewFrame.top,previewFrame.right,previewFrame.bottom,paint);
+        canvas.drawLine(previewFrame.left,previewFrame.top,previewFrame.right,previewFrame.top,paint);
+        canvas.drawLine(previewFrame.left,previewFrame.bottom,previewFrame.right,previewFrame.bottom,paint);
+
         List<ResultPoint> currentPossible = possibleResultPoints;
         List<ResultPoint> currentLast = lastPossibleResultPoints;
 
