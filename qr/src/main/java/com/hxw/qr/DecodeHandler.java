@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
@@ -17,6 +16,8 @@ import com.google.zxing.common.HybridBinarizer;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Map;
+
+import timber.log.Timber;
 
 /**
  * @author hxw
@@ -95,7 +96,7 @@ final class DecodeHandler extends Handler {
         Handler handler = zxingView.getCaptureHandler();
         if (handler != null) {
             if (rawResult != null) {
-                Log.d(TAG, "解码时间: " + (end - start) + " ms");
+                Timber.tag(TAG).d("解码时间: " + (end - start) + " ms");
                 Message message = Message.obtain(handler, CameraConstant.decode_succeeded, rawResult);
 
                 //注释掉的是图片数据的建立,测试时可能会用,通常用不到

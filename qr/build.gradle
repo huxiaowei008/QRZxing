@@ -32,6 +32,10 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
 
+    implementation 'com.jakewharton.timber:timber:4.7.0'
     implementation 'com.google.zxing:core:3.3.2'
     implementation 'com.google.zxing:android-core:3.3.0'
 }
+
+//需要放在这,放上面会出问题 Error:Cause: android.compileSdkVersion is missing!
+apply from: 'bintray.gradle'

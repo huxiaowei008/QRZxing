@@ -8,10 +8,11 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Vibrator;
-import android.util.Log;
 
 import java.io.Closeable;
 import java.io.IOException;
+
+import timber.log.Timber;
 
 /**
  * 哔哔声和震动管理
@@ -73,7 +74,7 @@ final class BeepManager implements MediaPlayer.OnErrorListener, Closeable {
             mediaPlayer.prepare();
             return mediaPlayer;
         } catch (IOException ioe) {
-            Log.w(TAG, ioe);
+            Timber.tag(TAG).w(ioe);
             mediaPlayer.release();
             return null;
         }

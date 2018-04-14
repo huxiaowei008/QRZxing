@@ -7,6 +7,7 @@ import java.util.Set;
 
 /**
  * 码的类型
+ *
  * @author hxw
  * @date 2018/2/13
  */

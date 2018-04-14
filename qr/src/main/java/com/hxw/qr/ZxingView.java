@@ -18,7 +18,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -36,6 +35,8 @@ import com.google.zxing.client.android.camera.CameraConfigurationUtils;
 
 import java.io.IOException;
 
+import timber.log.Timber;
+
 
 /**
  * 主要视图
@@ -47,7 +48,6 @@ import java.io.IOException;
 public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private static final String TAG = ZxingView.class.getSimpleName();
     private static final int REQUEST_CODE = 1008;
-
     /**
      * 这里提供了预览框架，我们将其传递给注册的处理程序。确保清除处理程序，使它只接收一条消息。
      */
@@ -110,7 +110,6 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     public ZxingView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
-
 
     /**
      * 初始化需要的视图
@@ -178,7 +177,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        Log.d(TAG, "surfaceCreated");
+        Timber.tag(TAG).d("surfaceCreated");
         if (!hasSurface) {
             hasSurface = true;
             initCamera(holder);
@@ -187,12 +186,12 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        Log.d(TAG, "surfaceChanged");
+        Timber.tag(TAG).d("surfaceChanged");
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d(TAG, "surfaceDestroyed");
+        Timber.tag(TAG).d("surfaceDestroyed");
         hasSurface = false;
     }
 
@@ -227,7 +226,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
                 }, mCameraSetting.getDecodeFormats());
             }
         } catch (Exception e) {
-            Log.w(TAG, e);
+            Timber.tag(TAG).w(e);
             displayFrameworkBugMessageAndExit();
         }
     }
@@ -262,8 +261,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             setDesiredCameraParameters(mCamera, false, mCameraSetting);
         } catch (RuntimeException re) {
             //驱动程序失败
-            Log.w(TAG, "相机设置参数被拒。只设置最小安全模式的参数" + re.getMessage());
-            Log.i(TAG, "重新设置保存的相机参数: " + parametersFlattened);
+            Timber.tag(TAG).w("相机设置参数被拒。只设置最小安全模式的参数" + re.getMessage());
+            Timber.tag(TAG).i("重新设置保存的相机参数: " + parametersFlattened);
             //重置
             if (parametersFlattened != null) {
                 parameters = mCamera.getParameters();
@@ -273,7 +272,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
                     setDesiredCameraParameters(mCamera, true, mCameraSetting);
                 } catch (RuntimeException re2) {
                     // 好吧,该死的。放弃
-                    Log.w(TAG, "相机甚至拒绝安全模式参数!无法配置");
+                    Timber.tag(TAG).w("相机甚至拒绝安全模式参数!无法配置");
                 }
             }
         }
@@ -287,7 +286,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         //获取手机所拥有的摄像头
         int numCameras = Camera.getNumberOfCameras();
         if (numCameras == 0) {
-            Log.w(TAG, "没有摄像头!");
+            Timber.tag(TAG).w("没有摄像头!");
             return;
         }
 
@@ -313,14 +312,14 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
 
         //打开指定的摄像头
         if (index < numCameras) {
-            Log.i(TAG, "打开摄像头为 #" + index);
+            Timber.tag(TAG).i("打开摄像头为 #" + index);
             mCamera = Camera.open(index);
         } else {
             if (explicitRequest) {
-                Log.w(TAG, "请求的摄像头不存在: " + cameraId);
+                Timber.tag(TAG).w("请求的摄像头不存在: " + cameraId);
                 mCamera = null;
             } else {
-                Log.i(TAG, "没有摄像头的facing是 " +
+                Timber.tag(TAG).i("没有摄像头的facing是 " +
                         Camera.CameraInfo.CAMERA_FACING_BACK + "; 默认返回摄像头 #0");
                 mCamera = Camera.open(0);
                 mCameraInfo = new Camera.CameraInfo();
@@ -368,27 +367,27 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
                     throw new IllegalArgumentException("不好的旋转角度 Bad rotation: " + displayRotation);
                 }
         }
-        Log.i(TAG, "显示角度 Display at: " + cwRotationFromNaturalToDisplay);
+        Timber.tag(TAG).i("显示角度 Display at: " + cwRotationFromNaturalToDisplay);
         int cwRotationFromNaturalToCamera = cameraInfo.orientation;
-        Log.i(TAG, "相机角度 Camera at: " + cwRotationFromNaturalToCamera);
+        Timber.tag(TAG).i("相机角度 Camera at: " + cwRotationFromNaturalToCamera);
 
         // 如果是前置摄像头,我们需要把它翻转过来。:
         if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             cwRotationFromNaturalToCamera = (360 - cwRotationFromNaturalToCamera) % 360;
-            Log.i(TAG, "前置摄像头重载 to: " + cwRotationFromNaturalToCamera);
+            Timber.tag(TAG).i("前置摄像头重载 to: " + cwRotationFromNaturalToCamera);
         }
 
         int cwRotationFromDisplayToCamera =
                 (360 + cwRotationFromNaturalToCamera - cwRotationFromNaturalToDisplay) % 360;
-        Log.i(TAG, "最终显示的方向: " + cwRotationFromDisplayToCamera);
+        Timber.tag(TAG).i("最终显示的方向: " + cwRotationFromDisplayToCamera);
 
         if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-            Log.i(TAG, "前置摄像头的补偿旋转");
+            Timber.tag(TAG).i("前置摄像头的补偿旋转");
             cwNeededRotation = (360 - cwRotationFromDisplayToCamera) % 360;
         } else {
             cwNeededRotation = cwRotationFromDisplayToCamera;
         }
-        Log.i(TAG, "从显示到相机的顺时针旋转: " + cwNeededRotation);
+        Timber.tag(TAG).i("从显示到相机的顺时针旋转: " + cwNeededRotation);
     }
 
     /**
@@ -397,10 +396,10 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private void initPreviewSize(Display display, Camera camera) {
         Point screenResolution = new Point();
         display.getSize(screenResolution);
-        Log.i(TAG, "当前方向的屏幕分辨率: " + screenResolution);
+        Timber.tag(TAG).i("当前方向的屏幕分辨率: " + screenResolution);
 
         cameraResolution = CameraConfigurationUtils.findBestPreviewSizeValue(camera.getParameters(), screenResolution);
-        Log.i(TAG, "最好的预览大小: " + cameraResolution);
+        Timber.tag(TAG).i("最好的预览大小: " + cameraResolution);
     }
 
     /**
@@ -409,12 +408,12 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private void setDesiredCameraParameters(Camera camera, boolean safeMode, CameraSetting cameraSetting) {
         Camera.Parameters parameters = camera.getParameters();
         if (parameters == null) {
-            Log.w(TAG, "设备错误:没有可以设置的相机参数。无法进行配置。");
+            Timber.tag(TAG).w("设备错误:没有可以设置的相机参数。无法进行配置。");
             return;
         }
-        Log.i(TAG, "最初的相机参数: " + parameters.flatten());
+        Timber.tag(TAG).i("最初的相机参数: " + parameters.flatten());
         if (safeMode) {
-            Log.w(TAG, "在相机配置安全模式下----大多数设置都不会被授予");
+            Timber.tag(TAG).w("在相机配置安全模式下----大多数设置都不会被授予");
         }
 
         boolean currentSetting = cameraSetting.getLightMode() == FrontLightMode.ON;
@@ -455,7 +454,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         Camera.Parameters afterParameters = camera.getParameters();
         Camera.Size afterSize = afterParameters.getPreviewSize();
         if (afterSize != null && (cameraResolution.x != afterSize.width || cameraResolution.y != afterSize.height)) {
-            Log.w(TAG, "摄像头说它支持预览尺寸 " + cameraResolution.x + 'x' + cameraResolution.y +
+            Timber.tag(TAG).w("摄像头说它支持预览尺寸 " + cameraResolution.x + 'x' + cameraResolution.y +
                     ", but after setting it, preview size is " + afterSize.width + 'x' + afterSize.height);
             cameraResolution.x = afterSize.width;
             cameraResolution.y = afterSize.height;
@@ -562,7 +561,6 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             previewCallback.setHandler(handler, message, cameraResolution);
             mCamera.setOneShotPreviewCallback(previewCallback);
         }
-        viewfinderView.drawViewfinder();
     }
 
     /**
@@ -601,6 +599,10 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         if (listener != null) {
             listener.result(rawResult.getText());
         }
+    }
+
+    void drawViewfinder() {
+        viewfinderView.drawViewfinder();
     }
 
     /**
@@ -680,5 +682,4 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
                     paint);
         }
     }
-
 }

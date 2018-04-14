@@ -8,13 +8,14 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 
 import com.google.zxing.ResultPoint;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import timber.log.Timber;
 
 /**
  * @author hxw
@@ -29,7 +30,7 @@ public class ViewfinderView extends View {
     protected static final int MAX_FRAME_HEIGHT = 675; // = 5/8 * 1080
 
     private static final int[] SCANNER_ALPHA = {0, 64, 128, 192, 255, 192, 128, 64};
-    private static final long ANIMATION_DELAY = 80L;
+    private static final long ANIMATION_DELAY = 160L;
     private static final int CURRENT_POINT_OPACITY = 0xA0;
     private static final int MAX_RESULT_POINTS = 20;
     private static final int POINT_SIZE = 6;
@@ -53,15 +54,13 @@ public class ViewfinderView extends View {
      * 一些结果点的绘制颜色
      */
     private final int resultPointColor;
-    private int scannerAlpha;
-    private List<ResultPoint> possibleResultPoints;
-    private List<ResultPoint> lastPossibleResultPoints;
-
-
     /**
      * 屏幕捕捉窗口的尺寸
      */
-    private Rect framingRect;
+    protected Rect framingRect;
+    private int scannerAlpha;
+    private List<ResultPoint> possibleResultPoints;
+    private List<ResultPoint> lastPossibleResultPoints;
     /**
      * 获得结果的图片
      */
@@ -90,87 +89,129 @@ public class ViewfinderView extends View {
         int width = canvas.getWidth();
         int height = canvas.getHeight();
 
-        Rect frame = getFramingRect(width, height);
-//        Rect previewFrame = getFramingRectInPreview();
-        if (frame == null) {
-            return;
+        if (framingRect == null) {
+            initFramingRect(width, height);
         }
-        drawMask(canvas, width, height, frame);
 
+        drawMask(canvas, width, height);
 
-        //绘制结果图
+        //绘制结果图 基本是不会被调用到的
         if (resultBitmap != null) {
             paint.setAlpha(CURRENT_POINT_OPACITY);
-            canvas.drawBitmap(resultBitmap, null, frame, paint);
+            canvas.drawBitmap(resultBitmap, null, framingRect, paint);
         }
-//            {
-//            // Draw a red "laser scanner" line through the middle to show decoding is active
-//            // 在中间画一个红色的“激光扫描器”，显示解码是活跃的
-//            paint.setColor(laserColor);
-//            paint.setAlpha(SCANNER_ALPHA[scannerAlpha]);
-//            scannerAlpha = (scannerAlpha + 1) % SCANNER_ALPHA.length;
-//            int middle = frame.height() / 2 + frame.top;
-//            canvas.drawRect(frame.left + 2, middle - 1, frame.right - 1, middle + 2, paint);
-//
-//            float scaleX = frame.width() / (float) previewFrame.width();
-//            float scaleY = frame.height() / (float) previewFrame.height();
-//
-//            List<ResultPoint> currentPossible = possibleResultPoints;
-//            List<ResultPoint> currentLast = lastPossibleResultPoints;
-//
-//            int frameLeft = frame.left;
-//            int frameTop = frame.top;
-//            if (currentPossible.isEmpty()) {
-//                lastPossibleResultPoints = null;
-//            } else {
-//                possibleResultPoints = new ArrayList<>(5);
-//                lastPossibleResultPoints = currentPossible;
-//                paint.setAlpha(CURRENT_POINT_OPACITY);
-//                paint.setColor(resultPointColor);
-//                synchronized (currentPossible) {
-//                    for (ResultPoint point : currentPossible) {
-//                        canvas.drawCircle(frameLeft + (int) (point.getX() * scaleX),
-//                                frameTop + (int) (point.getY() * scaleY),
-//                                POINT_SIZE, paint);
-//                    }
-//                }
-//            }
-//            if (currentLast != null) {
-//                paint.setAlpha(CURRENT_POINT_OPACITY / 2);
-//                paint.setColor(resultPointColor);
-//                synchronized (currentLast) {
-//                    float radius = POINT_SIZE / 2.0f;
-//                    for (ResultPoint point : currentLast) {
-//                        canvas.drawCircle(frameLeft + (int) (point.getX() * scaleX),
-//                                frameTop + (int) (point.getY() * scaleY),
-//                                radius, paint);
-//                    }
-//                }
-//            }
-//
-//            // Request another update at the animation interval, but only repaint the laser line,
-//            // not the entire viewfinder mask.
-//            postInvalidateDelayed(ANIMATION_DELAY,
-//                    frame.left - POINT_SIZE,
-//                    frame.top - POINT_SIZE,
-//                    frame.right + POINT_SIZE,
-//                    frame.bottom + POINT_SIZE);
-//        }
+
+        drawResultPoint(canvas, width, height);
+
+        drawLaser(canvas);
+
+
+        // 请求在动画间隔内的另一个更新，但只重新绘制激光线，
+        // 不是整个取景器的面具。这句看情况添加,自己设计动画就不一定需要,如果界面没有更新动画肯定是没添加这句
+        postInvalidateDelayed(ANIMATION_DELAY,
+                framingRect.left - POINT_SIZE,
+                framingRect.top - POINT_SIZE,
+                framingRect.right + POINT_SIZE,
+                framingRect.bottom + POINT_SIZE);
+    }
+
+    /**
+     * 绘制结果关键点,画不画都没什么关系
+     */
+    protected void drawResultPoint(Canvas canvas, float width, float height) {
+        float scaleX = framingRect.width() / width;
+        float scaleY = framingRect.height() / height;
+
+        List<ResultPoint> currentPossible = possibleResultPoints;
+        List<ResultPoint> currentLast = lastPossibleResultPoints;
+
+        int frameLeft = framingRect.left;
+        int frameTop = framingRect.top;
+        if (currentPossible.isEmpty()) {
+            lastPossibleResultPoints = null;
+        } else {
+            possibleResultPoints = new ArrayList<>(5);
+            lastPossibleResultPoints = currentPossible;
+            paint.setAlpha(CURRENT_POINT_OPACITY);
+            paint.setColor(resultPointColor);
+            synchronized (currentPossible) {
+                for (ResultPoint point : currentPossible) {
+                    canvas.drawCircle(frameLeft + (int) (point.getX() * scaleX),
+                            frameTop + (int) (point.getY() * scaleY),
+                            POINT_SIZE, paint);
+                }
+            }
+        }
+        if (currentLast != null) {
+            paint.setAlpha(CURRENT_POINT_OPACITY / 2);
+            paint.setColor(resultPointColor);
+            synchronized (currentLast) {
+                float radius = POINT_SIZE / 2.0f;
+                for (ResultPoint point : currentLast) {
+                    canvas.drawCircle(frameLeft + (int) (point.getX() * scaleX),
+                            frameTop + (int) (point.getY() * scaleY),
+                            radius, paint);
+                }
+            }
+        }
+    }
+
+    /**
+     * 绘制激光
+     */
+    protected void drawLaser(Canvas canvas) {
+        // Draw a red "laser scanner" line through the middle to show decoding is active
+        // 在中间画一个红色的“激光扫描器”，显示解码是活跃的
+        paint.setColor(laserColor);
+        paint.setAlpha(SCANNER_ALPHA[scannerAlpha]);
+        scannerAlpha = (scannerAlpha + 1) % SCANNER_ALPHA.length;
+        int middle = framingRect.height() / 2 + framingRect.top;
+        canvas.drawRect(framingRect.left + 2, middle - 1, framingRect.right - 1, middle + 2, paint);
     }
 
     /**
      * 绘制遮罩
      */
-    protected void drawMask(Canvas canvas, int width, int height, Rect frame) {
+    protected void drawMask(Canvas canvas, int width, int height) {
         //画出外部(即框架的外面)变暗。
         paint.setColor(resultBitmap != null ? resultColor : maskColor);
-        canvas.drawRect(0, 0, width, frame.top, paint);
-        canvas.drawRect(0, frame.top, frame.left, frame.bottom + 1, paint);
-        canvas.drawRect(frame.right + 1, frame.top, width, frame.bottom + 1, paint);
-        canvas.drawRect(0, frame.bottom + 1, width, height, paint);
+        canvas.drawRect(0, 0, width, framingRect.top, paint);
+        canvas.drawRect(0, framingRect.top, framingRect.left, framingRect.bottom + 1, paint);
+        canvas.drawRect(framingRect.right + 1, framingRect.top, width, framingRect.bottom + 1, paint);
+        canvas.drawRect(0, framingRect.bottom + 1, width, height, paint);
     }
 
-    public void addPossibleResultPoint(ResultPoint point) {
+    /**
+     * 屏幕捕捉窗口的大小
+     */
+    protected void initFramingRect(int sWidth, int sHeight) {
+
+        Point screenResolution = new Point(sWidth, sHeight);
+
+        int width = findDesiredDimensionInRange(screenResolution.x, MIN_FRAME_WIDTH, MAX_FRAME_WIDTH);
+        int height = findDesiredDimensionInRange(screenResolution.y, MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
+
+        int leftOffset = (screenResolution.x - width) / 2;
+        int topOffset = (screenResolution.y - height) / 2;
+        framingRect = new Rect(leftOffset, topOffset, leftOffset + width, topOffset + height);
+        Timber.tag(TAG).d("计算出屏幕捕捉窗口的大小: " + framingRect);
+    }
+
+    protected int findDesiredDimensionInRange(int resolution, int hardMin, int hardMax) {
+        int dim = 5 * resolution / 8; // Target 5/8 of each dimension
+        if (dim < hardMin) {
+            return hardMin;
+        }
+        if (dim > hardMax) {
+            return hardMax;
+        }
+        return dim;
+    }
+
+    /**
+     * 添加可能的结果点
+     */
+    void addPossibleResultPoint(ResultPoint point) {
         List<ResultPoint> points = possibleResultPoints;
         synchronized (points) {
             points.add(point);
@@ -194,7 +235,6 @@ public class ViewfinderView extends View {
         invalidate();
     }
 
-
     /**
      * 设置获得结果的图像(测试时用)
      *
@@ -203,37 +243,5 @@ public class ViewfinderView extends View {
     void drawResultBitmap(Bitmap barcode) {
         resultBitmap = barcode;
         invalidate();
-    }
-
-
-    /**
-     * 屏幕捕捉窗口的大小
-     *
-     * @return The rectangle to draw on screen in window coordinates.
-     */
-    synchronized Rect getFramingRect(int sWidth, int sHeight) {
-        if (framingRect == null) {
-            Point screenResolution = new Point(sWidth, sHeight);
-
-            int width = findDesiredDimensionInRange(screenResolution.x, MIN_FRAME_WIDTH, MAX_FRAME_WIDTH);
-            int height = findDesiredDimensionInRange(screenResolution.y, MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
-
-            int leftOffset = (screenResolution.x - width) / 2;
-            int topOffset = (screenResolution.y - height) / 2;
-            framingRect = new Rect(leftOffset, topOffset, leftOffset + width, topOffset + height);
-            Log.d(TAG, "计算出屏幕捕捉窗口的大小: " + framingRect);
-        }
-        return framingRect;
-    }
-
-    private int findDesiredDimensionInRange(int resolution, int hardMin, int hardMax) {
-        int dim = 5 * resolution / 8; // Target 5/8 of each dimension
-        if (dim < hardMin) {
-            return hardMin;
-        }
-        if (dim > hardMax) {
-            return hardMax;
-        }
-        return dim;
     }
 }

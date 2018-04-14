@@ -34,7 +34,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }).setVibrate(true)
                 .setPlayBeep(false)
-                .setLightMode(FrontLightMode.OFF));
+                .setLightMode(FrontLightMode.OFF)
+                .setViewfinderView(new ScanView(this)));
 
         findViewById(R.id.btn_restart).setOnClickListener(new View.OnClickListener() {
             @Override

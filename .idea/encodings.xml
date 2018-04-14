@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding" native2AsciiForPropertiesFiles="true" defaultCharsetForPropertiesFiles="UTF-8">
+    <file url="file://$PROJECT_DIR$/qr/bintray.gradle" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/AmbientLightManager.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/AutoFocusManager.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/BeepManager.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/CameraConstant.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/CameraSetting.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/CaptureHandler.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/DecodeFormatManager.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/DecodeHandler.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/DecodeThread.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/FrontLightMode.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/PreviewCallback.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/ViewfinderView.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qr/src/main/java/com/hxw/qr/ZxingView.java" charset="UTF-8" />
+    <file url="PROJECT" charset="UTF-8" />
+  </component>
+</project>

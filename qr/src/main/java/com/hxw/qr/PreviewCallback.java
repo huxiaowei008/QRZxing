@@ -4,10 +4,12 @@ import android.graphics.Point;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
+
+import timber.log.Timber;
 
 /**
  * 相机预览的回掉
+ *
  * @author hxw
  * @date 2018/4/11.
  */
@@ -32,7 +34,7 @@ final class PreviewCallback implements Camera.PreviewCallback {
             message.sendToTarget();
             previewHandler = null;
         } else {
-            Log.d(TAG, "有预览回调，但没有处理程序的handler或屏幕分辨率可用!");
+            Timber.tag(TAG).d("有预览回调，但没有处理程序的handler或屏幕分辨率可用!");
         }
     }
 }

@@ -63,7 +63,7 @@ public class CameraSetting {
      */
     private boolean vibrate = false;
 
-    private ViewfinderView viewfinderView= null;
+    private ViewfinderView viewfinderView = null;
 
     public boolean isDisExposure() {
         return disExposure;

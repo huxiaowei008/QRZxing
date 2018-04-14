@@ -93,6 +93,7 @@ public final class CaptureHandler extends Handler {
         if (state == State.SUCCESS) {
             state = State.PREVIEW;
             zxingView.requestPreviewFrame(decodeThread.getHandler(), CameraConstant.decode);
+            zxingView.drawViewfinder();
         }
     }
 
