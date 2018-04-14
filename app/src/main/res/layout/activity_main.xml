@@ -25,7 +25,16 @@
         android:layout_height="wrap_content"
         android:text="重启"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/tbtn"/>
 
+    <ToggleButton
+        android:id="@+id/tbtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textOff="开"
+        android:textOn="关"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/btn_restart"
+        app:layout_constraintEnd_toEndOf="parent"/>
 </android.support.constraint.ConstraintLayout>

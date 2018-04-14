@@ -5,7 +5,9 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.CompoundButton;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.hxw.qr.CameraSetting;
 import com.hxw.qr.FrontLightMode;
@@ -41,6 +43,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 zxingView.restartPreviewAfterDelay(500);
+            }
+        });
+
+        ((ToggleButton) findViewById(R.id.tbtn)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                zxingView.setTorch(isChecked);
             }
         });
     }
