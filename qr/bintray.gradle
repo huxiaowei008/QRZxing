@@ -3,7 +3,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 
 
 def vName = "1.0.0"
-def projectName = 'KotlinFrame'
+def projectName = 'QRZxing'
 def gitUrl = 'https://github.com/huxiaowei008/QRZxing.git'   // Git仓库的url
 def siteUrl = 'https://github.com/huxiaowei008/QRZxing'   // 项目的主页
 
@@ -98,15 +98,15 @@ artifacts {
 }
 
 //把javadoc的编码方式变为UTF-8
-//javadoc {
-//    options{
-//        encoding "UTF-8"
-//        charSet 'UTF-8'
-//        author true
-//        version true
-//        links "http://docs.oracle.com/javase/7/docs/api"
-//    }
-//}
+javadoc {
+    options{
+        encoding "UTF-8"
+        charSet 'UTF-8'
+        author true
+        version true
+        links "http://docs.oracle.com/javase/7/docs/api"
+    }
+}
 
 
 
