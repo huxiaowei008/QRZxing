@@ -48,7 +48,8 @@ public class CameraSetting {
     /**
      * 灯光模式
      */
-    private FrontLightMode lightMode = FrontLightMode.OFF;
+    @FrontLightMode.Mode
+    private int lightMode = FrontLightMode.OFF;
     /**
      * 解码类型,默认就一个二维码
      */
@@ -128,11 +129,12 @@ public class CameraSetting {
         return this;
     }
 
-    public FrontLightMode getLightMode() {
+    @FrontLightMode.Mode
+    public int getLightMode() {
         return lightMode;
     }
 
-    public CameraSetting setLightMode(FrontLightMode lightMode) {
+    public CameraSetting setLightMode(@FrontLightMode.Mode  int lightMode) {
         this.lightMode = lightMode;
         return this;
     }

@@ -20,10 +20,12 @@ final class AmbientLightManager implements SensorEventListener {
 
     private final Context context;
     private final ZxingView zxingView;
-    private FrontLightMode ligthMode;
+
+    @FrontLightMode.Mode
+    private int ligthMode;
     private Sensor lightSensor;
 
-    AmbientLightManager(Context context, ZxingView zxingView, FrontLightMode lightMode) {
+    AmbientLightManager(Context context, ZxingView zxingView, @FrontLightMode.Mode int lightMode) {
         this.context = context;
         this.zxingView = zxingView;
         this.ligthMode = lightMode;
