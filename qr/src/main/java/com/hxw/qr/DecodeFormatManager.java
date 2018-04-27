@@ -6,10 +6,8 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * 码的类型
- *
  * @author hxw
- * @date 2018/2/13
+ * 码的类型
  */
 
 public final class DecodeFormatManager {

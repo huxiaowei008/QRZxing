@@ -12,7 +12,7 @@ import java.util.Collection;
 
 /**
  * @author hxw
- * @date 2018/4/11.
+ * 主线程的handler,用于结果和操作
  */
 
 public final class CaptureHandler extends Handler {

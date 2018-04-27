@@ -15,10 +15,8 @@ import java.io.IOException;
 import timber.log.Timber;
 
 /**
- * 哔哔声和震动管理
- *
  * @author hxw
- * @date 2018/4/12.
+ * 哔哔声和震动管理
  */
 
 final class BeepManager implements MediaPlayer.OnErrorListener, Closeable {

@@ -22,6 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
+ * @author hxw
  * 枚举控制前光源的设置
  */
 public final class FrontLightMode {

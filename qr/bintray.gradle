@@ -2,7 +2,7 @@ apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.dcendents.android-maven'
 
 
-def vName = "1.0.1"
+def vName = rootProject.versionName
 def projectName = 'QRZxing'
 def gitUrl = 'https://github.com/huxiaowei008/QRZxing.git'   // Git仓库的url
 def siteUrl = 'https://github.com/huxiaowei008/QRZxing'   // 项目的主页

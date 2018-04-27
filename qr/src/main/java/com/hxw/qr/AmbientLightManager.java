@@ -7,10 +7,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
 /**
- * 探测周围的光，当非常暗的时候，打开灯光，在有足够的光线下再次关闭。
- *
  * @author hxw
- * @date 2018/4/13.
+ * 探测周围的光，当非常暗的时候，打开灯光，在有足够的光线下再次关闭。
  */
 
 final class AmbientLightManager implements SensorEventListener {

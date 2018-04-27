@@ -6,10 +6,8 @@ import java.util.Collection;
 import java.util.Set;
 
 /**
- * 相机和码的扫描设置
- *
  * @author hxw
- * @date 2018/4/9.
+ * 相机和码的扫描设置
  */
 
 public class CameraSetting {

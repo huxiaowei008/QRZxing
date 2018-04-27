@@ -1,10 +1,8 @@
 package com.hxw.qr;
 
 /**
- * 本库的常量
- *
  * @author hxw
- * @date 2018/4/10.
+ * 本库的常量
  */
 
 public class CameraConstant {
