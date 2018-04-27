@@ -1,12 +1,12 @@
 # QRZxing
-[ ![bintray](https://api.bintray.com/packages/huxiaowei008/maven/QRZxing/images/download.svg) ](https://bintray.com/huxiaowei008/maven/QRZxing/_latestVersion)
+[ ![Download](https://api.bintray.com/packages/huxiaowei008/maven/QRZxing/images/download.svg) ](https://bintray.com/huxiaowei008/maven/QRZxing/_latestVersion)
 [![License](http://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square) ](http://www.apache.org/licenses/LICENSE-2.0)
 
 二维码扫描库封装
 
 ## 下载
 ```gradle
-compile 'com.hxw.qr:qr:<latestVersion>'
+compile 'com.hxw:qr:<latestVersion>'
 ```
 ## 使用
 在布局中
@@ -63,7 +63,7 @@ compile 'com.hxw.qr:qr:<latestVersion>'
               .setViewfinderView(new ScanView(this)));
 
 ```
-
+可以通过继承ViewfinderView来自己绘制界面效果,具体可以参考项目。
 ## License
 ```
 Copyright huxiaowei008
