@@ -8,10 +8,8 @@ import android.os.Message;
 import timber.log.Timber;
 
 /**
- * 相机预览的回掉
- *
  * @author hxw
- * @date 2018/4/11.
+ * 相机预览的回掉
  */
 
 final class PreviewCallback implements Camera.PreviewCallback {

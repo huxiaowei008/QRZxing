@@ -16,21 +16,23 @@
 
 package com.hxw.qr;
 
+import android.support.annotation.IntDef;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
 /**
+ * @author hxw
  * 枚举控制前光源的设置
  */
-public enum FrontLightMode {
+public final class FrontLightMode {
 
-    /**
-     * Always on.
-     */
-    ON,
-    /**
-     * On only when ambient light is low.
-     */
-    AUTO,
-    /**
-     * Always off.
-     */
-    OFF;
+    public static final int ON = 1;
+    public static final int AUTO = 0;
+    public static final int OFF = -1;
+
+    @IntDef({ON, AUTO, OFF})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface Mode {
+    }
 }

@@ -19,7 +19,7 @@ import timber.log.Timber;
 
 /**
  * @author hxw
- * @date 2018/2/13
+ * 界面显示的视图
  */
 
 public class ViewfinderView extends View {

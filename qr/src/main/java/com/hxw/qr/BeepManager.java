@@ -15,10 +15,8 @@ import java.io.IOException;
 import timber.log.Timber;
 
 /**
- * 哔哔声和震动管理
- *
  * @author hxw
- * @date 2018/4/12.
+ * 哔哔声和震动管理
  */
 
 final class BeepManager implements MediaPlayer.OnErrorListener, Closeable {
@@ -46,8 +44,10 @@ final class BeepManager implements MediaPlayer.OnErrorListener, Closeable {
         if (shouldPlayBeep) {
             // See if sound settings overrides this
             AudioManager audioService = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
-            if (audioService.getRingerMode() != AudioManager.RINGER_MODE_NORMAL) {
-                shouldPlayBeep = false;
+            if (audioService != null) {
+                if (audioService.getRingerMode() != AudioManager.RINGER_MODE_NORMAL) {
+                    shouldPlayBeep = false;
+                }
             }
         }
         return shouldPlayBeep;

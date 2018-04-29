@@ -39,10 +39,8 @@ import timber.log.Timber;
 
 
 /**
- * 主要视图
- *
  * @author hxw
- * @date 2018/4/9.
+ * 主要控件和控制
  */
 public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private static final String TAG = ZxingView.class.getSimpleName();

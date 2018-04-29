@@ -13,10 +13,8 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * 用于处理解码的异步线程
- *
  * @author hxw
- * @date 2018/4/11.
+ * 用于处理解码的异步线程
  */
 
 final class DecodeThread extends Thread {

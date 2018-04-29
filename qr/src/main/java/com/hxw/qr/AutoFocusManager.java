@@ -10,10 +10,8 @@ import java.util.concurrent.RejectedExecutionException;
 import timber.log.Timber;
 
 /**
- * 自动对焦管理
- *
  * @author hxw
- * @date 2018/4/13.
+ * 自动对焦管理
  */
 
 final class AutoFocusManager implements Camera.AutoFocusCallback {

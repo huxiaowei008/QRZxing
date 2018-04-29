@@ -21,7 +21,7 @@ import timber.log.Timber;
 
 /**
  * @author hxw
- * @date 2018/4/11.
+ * 用于处理的解码的handler
  */
 
 final class DecodeHandler extends Handler {
