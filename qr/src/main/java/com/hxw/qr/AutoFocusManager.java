@@ -52,7 +52,7 @@ final class AutoFocusManager implements Camera.AutoFocusCallback {
                 newTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 outstandingTask = newTask;
             } catch (RejectedExecutionException ree) {
-                Timber.tag(TAG).w("Could not request auto focus", ree);
+                Timber.tag(TAG).w(ree,"Could not request auto focus");
             }
         }
     }
@@ -66,7 +66,7 @@ final class AutoFocusManager implements Camera.AutoFocusCallback {
                     focusing = true;
                 } catch (RuntimeException re) {
                     // Have heard RuntimeException reported in Android 4.0.x+; continue?
-                    Timber.tag(TAG).w("Unexpected exception while focusing", re);
+                    Timber.tag(TAG).w(re,"Unexpected exception while focusing");
                     // Try again later to keep cycle going
                     autoFocusAgainLater();
                 }
@@ -92,7 +92,7 @@ final class AutoFocusManager implements Camera.AutoFocusCallback {
                 camera.cancelAutoFocus();
             } catch (RuntimeException re) {
                 // Have heard RuntimeException reported in Android 4.0.x+; continue?
-                Timber.tag(TAG).w("Unexpected exception while cancelling focusing", re);
+                Timber.tag(TAG).w(re,"Unexpected exception while cancelling focusing");
             }
         }
     }
