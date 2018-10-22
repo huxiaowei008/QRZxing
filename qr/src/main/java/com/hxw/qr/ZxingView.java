@@ -218,7 +218,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
                 handler = new CaptureHandler(this, new ResultPointCallback() {
                     @Override
                     public void foundPossibleResultPoint(ResultPoint point) {
-                        viewfinderView.addPossibleResultPoint(point);
+//                        viewfinderView.addPossibleResultPoint(point);
                     }
                 }, mCameraSetting.getDecodeFormats());
             }
@@ -588,18 +588,13 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     void handleDecode(Result rawResult, Bitmap barcode, float scaleFactor) {
         beepManager.playBeepSoundAndVibrate();
 
-        if (barcode != null) {
-            drawResultPoints(barcode, scaleFactor, rawResult);
-            viewfinderView.drawResultBitmap(barcode);
-        }
+//        if (barcode != null) {
+//            drawResultPoints(barcode, scaleFactor, rawResult);
+//        }
         CameraSetting.ZxingResultListener listener = mCameraSetting.getListener();
         if (listener != null) {
             listener.result(rawResult.getText());
         }
-    }
-
-    void drawViewfinder() {
-        viewfinderView.drawViewfinder();
     }
 
     /**

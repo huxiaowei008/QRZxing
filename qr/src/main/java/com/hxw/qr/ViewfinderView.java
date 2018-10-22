@@ -61,10 +61,6 @@ public class ViewfinderView extends View {
     private int scannerAlpha;
     private List<ResultPoint> possibleResultPoints;
     private List<ResultPoint> lastPossibleResultPoints;
-    /**
-     * 获得结果的图片
-     */
-    private Bitmap resultBitmap;
 
     public ViewfinderView(Context context) {
         this(context, null);
@@ -95,13 +91,7 @@ public class ViewfinderView extends View {
 
         drawMask(canvas, width, height);
 
-        //绘制结果图 基本是不会被调用到的
-        if (resultBitmap != null) {
-            paint.setAlpha(CURRENT_POINT_OPACITY);
-            canvas.drawBitmap(resultBitmap, null, framingRect, paint);
-        }
-
-        drawResultPoint(canvas, width, height);
+//        drawResultPoint(canvas, width, height);
 
         drawLaser(canvas);
 
@@ -174,7 +164,7 @@ public class ViewfinderView extends View {
      */
     protected void drawMask(Canvas canvas, int width, int height) {
         //画出外部(即框架的外面)变暗。
-        paint.setColor(resultBitmap != null ? resultColor : maskColor);
+        paint.setColor(maskColor);
         canvas.drawRect(0, 0, width, framingRect.top, paint);
         canvas.drawRect(0, framingRect.top, framingRect.left, framingRect.bottom + 1, paint);
         canvas.drawRect(framingRect.right + 1, framingRect.top, width, framingRect.bottom + 1, paint);
@@ -223,25 +213,4 @@ public class ViewfinderView extends View {
         }
     }
 
-    /**
-     * 清除获得结果的图像(通常无用)
-     */
-    void drawViewfinder() {
-        Bitmap resultBitmap = this.resultBitmap;
-        this.resultBitmap = null;
-        if (resultBitmap != null) {
-            resultBitmap.recycle();
-        }
-        invalidate();
-    }
-
-    /**
-     * 设置获得结果的图像(测试时用)
-     *
-     * @param barcode 获得结果的图像
-     */
-    void drawResultBitmap(Bitmap barcode) {
-        resultBitmap = barcode;
-        invalidate();
-    }
 }
