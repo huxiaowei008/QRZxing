@@ -1,7 +1,6 @@
 package com.hxw.qr;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -82,8 +81,8 @@ public class ViewfinderView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
 
-        int width = canvas.getWidth();
-        int height = canvas.getHeight();
+        int width = getWidth();
+        int height = getHeight();
 
         if (framingRect == null) {
             initFramingRect(width, height);
@@ -166,9 +165,9 @@ public class ViewfinderView extends View {
         //画出外部(即框架的外面)变暗。
         paint.setColor(maskColor);
         canvas.drawRect(0, 0, width, framingRect.top, paint);
-        canvas.drawRect(0, framingRect.top, framingRect.left, framingRect.bottom + 1, paint);
-        canvas.drawRect(framingRect.right + 1, framingRect.top, width, framingRect.bottom + 1, paint);
-        canvas.drawRect(0, framingRect.bottom + 1, width, height, paint);
+        canvas.drawRect(0, framingRect.top, framingRect.left, framingRect.bottom, paint);
+        canvas.drawRect(framingRect.right, framingRect.top, width, framingRect.bottom, paint);
+        canvas.drawRect(0, framingRect.bottom, width, height, paint);
     }
 
     /**
