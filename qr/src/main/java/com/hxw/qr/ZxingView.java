@@ -13,10 +13,6 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.hardware.Camera;
 import android.os.Handler;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import android.util.AttributeSet;
 import android.view.Display;
 import android.view.Surface;
@@ -35,6 +31,14 @@ import com.google.zxing.client.android.camera.CameraConfigurationUtils;
 
 import java.io.IOException;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.OnLifecycleEvent;
 import timber.log.Timber;
 
 
@@ -42,15 +46,13 @@ import timber.log.Timber;
  * @author hxw
  * 主要控件和控制
  */
-public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
+public class ZxingView extends FrameLayout implements SurfaceHolder.Callback, LifecycleObserver {
     private static final String TAG = ZxingView.class.getSimpleName();
-    private static final int REQUEST_CODE = 1008;
     /**
      * 这里提供了预览框架，我们将其传递给注册的处理程序。确保清除处理程序，使它只接收一条消息。
      */
     private final PreviewCallback previewCallback = new PreviewCallback();
     private SurfaceView surfaceView;
-    private ViewfinderView viewfinderView;
     private Activity mActivity;
     /**
      * 开放出来的相机的设置属性
@@ -113,7 +115,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      */
     private void initView(Context context, ViewfinderView view) {
         surfaceView = new SurfaceView(context);
-        viewfinderView = view;
+        ViewfinderView viewfinderView = view;
         if (viewfinderView == null) {
             viewfinderView = new ViewfinderView(context);
         }
@@ -127,8 +129,9 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     /**
      * ######################模仿activity的生命周期##################################################
      */
-    public void onCreate(Activity activity, CameraSetting cameraSetting) {
+    public void onCreate(FragmentActivity activity, CameraSetting cameraSetting) {
         mActivity = activity;
+        activity.getLifecycle().addObserver(this);
         mCameraSetting = cameraSetting;
         beepManager = new BeepManager(activity, cameraSetting);
         ambientLightManager = new AmbientLightManager(activity, this,
@@ -137,10 +140,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         hasSurface = false;
     }
 
-    public void onResume() {
-
+    private void onResume() {
         ambientLightManager.start();
-
         if (hasSurface) {
             // The activity was paused but not stopped, so the surface still exists. Therefore
             // surfaceCreated() won't be called, so init the camera here.
@@ -151,7 +152,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         }
     }
 
-    public void onPause() {
+    private void onPause() {
         if (handler != null) {
             handler.quitSynchronously();
             handler = null;
@@ -165,11 +166,29 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         }
     }
 
-    public void onDestroy() {
+    private void onDestroy() {
         mCameraSetting = null;
         mActivity = null;
     }
 
+    @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
+    public void onLifecycleChanged(@NonNull LifecycleOwner owner,
+                                   @NonNull Lifecycle.Event event) {
+        switch (event) {
+            case ON_RESUME:
+                onResume();
+                break;
+            case ON_PAUSE:
+                onPause();
+                break;
+            case ON_DESTROY:
+                owner.getLifecycle().removeObserver(this);
+                onDestroy();
+                break;
+            default:
+                break;
+        }
+    }
     //##############################################################################################
 
     @Override
@@ -200,14 +219,13 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      * 初始化相机
      */
     private void initCamera(SurfaceHolder surfaceHolder) {
-        if (ContextCompat.checkSelfPermission(mActivity, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            //没有权限
-            ActivityCompat.requestPermissions(mActivity, new String[]{Manifest.permission.CAMERA},
-                    REQUEST_CODE);
-            return;
-        }
         try {
+            if (ContextCompat.checkSelfPermission(mActivity, Manifest.permission.CAMERA)
+                    != PackageManager.PERMISSION_GRANTED) {
+                //没有权限
+                throw new IllegalAccessException("没有相机权限");
+            }
+
             if (surfaceHolder == null) {
                 throw new IllegalStateException("没有提供 SurfaceHolder ");
             }
@@ -258,8 +276,8 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             setDesiredCameraParameters(mCamera, false, mCameraSetting);
         } catch (RuntimeException re) {
             //驱动程序失败
-            Timber.tag(TAG).w("相机设置参数被拒。只设置最小安全模式的参数" + re.getMessage());
-            Timber.tag(TAG).i("重新设置保存的相机参数: " + parametersFlattened);
+            Timber.tag(TAG).w("相机设置参数被拒。只设置最小安全模式的参数%s", re.getMessage());
+            Timber.tag(TAG).i("重新设置保存的相机参数: %s", parametersFlattened);
             //重置
             if (parametersFlattened != null) {
                 parameters = mCamera.getParameters();
@@ -309,11 +327,11 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
 
         //打开指定的摄像头
         if (index < numCameras) {
-            Timber.tag(TAG).i("打开摄像头为 #" + index);
+            Timber.tag(TAG).i("打开摄像头为 #%s", index);
             mCamera = Camera.open(index);
         } else {
             if (explicitRequest) {
-                Timber.tag(TAG).w("请求的摄像头不存在: " + cameraId);
+                Timber.tag(TAG).w("请求的摄像头不存在: %s", cameraId);
                 mCamera = null;
             } else {
                 Timber.tag(TAG).i("没有摄像头的facing是 " +
@@ -364,19 +382,19 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
                     throw new IllegalArgumentException("不好的旋转角度 Bad rotation: " + displayRotation);
                 }
         }
-        Timber.tag(TAG).i("显示角度 Display at: " + cwRotationFromNaturalToDisplay);
+        Timber.tag(TAG).i("显示角度 Display at: %s", cwRotationFromNaturalToDisplay);
         int cwRotationFromNaturalToCamera = cameraInfo.orientation;
-        Timber.tag(TAG).i("相机角度 Camera at: " + cwRotationFromNaturalToCamera);
+        Timber.tag(TAG).i("相机角度 Camera at: %s", cwRotationFromNaturalToCamera);
 
         // 如果是前置摄像头,我们需要把它翻转过来。:
         if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             cwRotationFromNaturalToCamera = (360 - cwRotationFromNaturalToCamera) % 360;
-            Timber.tag(TAG).i("前置摄像头重载 to: " + cwRotationFromNaturalToCamera);
+            Timber.tag(TAG).i("前置摄像头重载 to: %s", cwRotationFromNaturalToCamera);
         }
 
         int cwRotationFromDisplayToCamera =
                 (360 + cwRotationFromNaturalToCamera - cwRotationFromNaturalToDisplay) % 360;
-        Timber.tag(TAG).i("最终显示的方向: " + cwRotationFromDisplayToCamera);
+        Timber.tag(TAG).i("最终显示的方向: %s", cwRotationFromDisplayToCamera);
 
         if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             Timber.tag(TAG).i("前置摄像头的补偿旋转");
@@ -384,7 +402,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
         } else {
             cwNeededRotation = cwRotationFromDisplayToCamera;
         }
-        Timber.tag(TAG).i("从显示到相机的顺时针旋转: " + cwNeededRotation);
+        Timber.tag(TAG).i("从显示到相机的顺时针旋转: %s", cwNeededRotation);
     }
 
     /**
@@ -393,10 +411,10 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
     private void initPreviewSize(Display display, Camera camera) {
         Point screenResolution = new Point();
         display.getSize(screenResolution);
-        Timber.tag(TAG).i("当前方向的屏幕分辨率: " + screenResolution);
+        Timber.tag(TAG).i("当前方向的屏幕分辨率: %s", screenResolution);
 
         cameraResolution = CameraConfigurationUtils.findBestPreviewSizeValue(camera.getParameters(), screenResolution);
-        Timber.tag(TAG).i("最好的预览大小: " + cameraResolution);
+        Timber.tag(TAG).i("最好的预览大小: %s", cameraResolution);
     }
 
     /**
@@ -408,7 +426,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
             Timber.tag(TAG).w("设备错误:没有可以设置的相机参数。无法进行配置。");
             return;
         }
-        Timber.tag(TAG).i("最初的相机参数: " + parameters.flatten());
+        Timber.tag(TAG).i("最初的相机参数: %s", parameters.flatten());
         if (safeMode) {
             Timber.tag(TAG).w("在相机配置安全模式下----大多数设置都不会被授予");
         }
@@ -535,27 +553,16 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      * #######################提供给外部和内部操作的方法####################################################
      */
 
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == REQUEST_CODE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initCamera(surfaceView.getHolder());
-            } else {
-                displayFrameworkBugMessageAndExit();
-            }
-        }
-    }
-
     /**
      * A single preview frame will be returned to the handler supplied. The data will arrive as byte[]
      * in the message.obj field, with width and height encoded as message.arg1 and message.arg2,
      * respectively.
      *
      * @param handler The handler to send the message to.
-     * @param message The what field of the message to be sent.
      */
-    synchronized void requestPreviewFrame(Handler handler, int message) {
+    synchronized void requestPreviewFrame(Handler handler) {
         if (mCamera != null && previewing) {
-            previewCallback.setHandler(handler, message, cameraResolution);
+            previewCallback.setHandler(handler, CameraConstant.DECODE, cameraResolution);
             mCamera.setOneShotPreviewCallback(previewCallback);
         }
     }
@@ -604,7 +611,7 @@ public class ZxingView extends FrameLayout implements SurfaceHolder.Callback {
      */
     public void restartPreviewAfterDelay(long delayMS) {
         if (handler != null) {
-            handler.sendEmptyMessageDelayed(CameraConstant.restart_preview, delayMS);
+            handler.sendEmptyMessageDelayed(CameraConstant.RESTART_PREVIEW, delayMS);
         }
     }
 

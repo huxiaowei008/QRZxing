@@ -53,43 +53,4 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.d(TAG, "onStart");
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.d(TAG, "onStop");
-    }
-
-    @Override
-    protected void onDestroy() {
-        zxingView.onDestroy();
-        super.onDestroy();
-        Log.d(TAG, "onDestroy");
-    }
-
-    @Override
-    protected void onPause() {
-        zxingView.onPause();
-        super.onPause();
-        Log.d(TAG, "onPause");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        zxingView.onResume();
-        Log.d(TAG, "onResume");
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        zxingView.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
 }

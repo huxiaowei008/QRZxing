@@ -1,5 +1,5 @@
 # QRZxing
-[ ![Download](https://api.bintray.com/packages/huxiaowei008/maven/QRZxing/images/download.svg) ](https://bintray.com/huxiaowei008/maven/QRZxing/_latestVersion)
+[![Download](https://api.bintray.com/packages/huxiaowei008/maven/QRZxing/images/download.svg) ](https://bintray.com/huxiaowei008/maven/QRZxing/_latestVersion)
 [![License](http://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square) ](http://www.apache.org/licenses/LICENSE-2.0)
 
 二维码扫描库封装
@@ -16,38 +16,6 @@ compile 'com.hxw:qr:<latestVersion>'
      android:layout_width="match_parent"
      android:layout_height="match_parent"/>
 ```
-让后在activity的周期中绑定
-```
-    @Override
-    protected void onDestroy() {
-        zxingView.onDestroy();
-        super.onDestroy();
-        Log.d(TAG, "onDestroy");
-    }
-
-    @Override
-    protected void onPause() {
-        zxingView.onPause();
-        super.onPause();
-        Log.d(TAG, "onPause");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        zxingView.onResume();
-        Log.d(TAG, "onResume");
-    }
-```
-会自动请求相机权限，所以
-```
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        zxingView.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-```
-
 在onCreate中可以设置一下配置
 ```
      zxingView.onCreate(this, new CameraSetting()

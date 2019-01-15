@@ -25,8 +25,8 @@ import timber.log.Timber;
  */
 
 final class DecodeHandler extends Handler {
-    static final String BARCODE_BITMAP = "barcode_bitmap";
-    static final String BARCODE_SCALED_FACTOR = "barcode_scaled_factor";
+    private static final String BARCODE_BITMAP = "barcode_bitmap";
+    private static final String BARCODE_SCALED_FACTOR = "barcode_scaled_factor";
     private static final String TAG = DecodeHandler.class.getSimpleName();
     private final MultiFormatReader multiFormatReader;
     private final ZxingView zxingView;
@@ -56,10 +56,10 @@ final class DecodeHandler extends Handler {
             return;
         }
         switch (msg.what) {
-            case CameraConstant.decode:
+            case CameraConstant.DECODE:
                 decode((byte[]) msg.obj, msg.arg1, msg.arg2);
                 break;
-            case CameraConstant.quit:
+            case CameraConstant.QUIT:
                 running = false;
                 Looper.myLooper().quit();
                 break;
@@ -97,7 +97,7 @@ final class DecodeHandler extends Handler {
         if (handler != null) {
             if (rawResult != null) {
                 Timber.tag(TAG).d("解码时间: " + (end - start) + " ms");
-                Message message = Message.obtain(handler, CameraConstant.decode_succeeded, rawResult);
+                Message message = Message.obtain(handler, CameraConstant.DECODE_SUCCEEDED, rawResult);
 
                 //注释掉的是图片数据的建立,测试时可能会用,通常用不到
 //                Bundle bundle = new Bundle();
@@ -106,7 +106,7 @@ final class DecodeHandler extends Handler {
 
                 message.sendToTarget();
             } else {
-                Message message = Message.obtain(handler, CameraConstant.decode_failed);
+                Message message = Message.obtain(handler, CameraConstant.DECODE_FAILED);
                 message.sendToTarget();
             }
         }

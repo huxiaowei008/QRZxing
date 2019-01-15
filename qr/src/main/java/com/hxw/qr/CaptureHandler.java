@@ -38,10 +38,10 @@ public final class CaptureHandler extends Handler {
     @Override
     public void handleMessage(Message msg) {
         switch (msg.what) {
-            case CameraConstant.restart_preview:
+            case CameraConstant.RESTART_PREVIEW:
                 restartPreviewAndDecode();
                 break;
-            case CameraConstant.decode_succeeded:
+            case CameraConstant.DECODE_SUCCEEDED:
                 state = State.SUCCESS;
 //注释掉的是图片数据的获取,测试时有用,通常时用不到的
 //                Bundle bundle = msg.getData();
@@ -59,10 +59,10 @@ public final class CaptureHandler extends Handler {
 
                 zxingView.handleDecode((Result) msg.obj, barcode, scaleFactor);
                 break;
-            case CameraConstant.decode_failed:
+            case CameraConstant.DECODE_FAILED:
                 //我们正在尽可能快地解码，所以当一个解码失败时，启动另一个
                 state = State.PREVIEW;
-                zxingView.requestPreviewFrame(decodeThread.getHandler(), CameraConstant.decode);
+                zxingView.requestPreviewFrame(decodeThread.getHandler());
                 break;
             default:
                 break;
@@ -72,7 +72,7 @@ public final class CaptureHandler extends Handler {
     void quitSynchronously() {
         state = State.DONE;
         zxingView.stopPreview();
-        Message quit = Message.obtain(decodeThread.getHandler(), CameraConstant.quit);
+        Message quit = Message.obtain(decodeThread.getHandler(), CameraConstant.QUIT);
         quit.sendToTarget();
         try {
             // 最多等半秒;应该有足够的时间, onPause() 会很快超时的
@@ -82,8 +82,8 @@ public final class CaptureHandler extends Handler {
         }
 
         //确定我们不会发送任何排队的消息。
-        removeMessages(CameraConstant.decode_succeeded);
-        removeMessages(CameraConstant.decode_failed);
+        removeMessages(CameraConstant.DECODE_SUCCEEDED);
+        removeMessages(CameraConstant.DECODE_FAILED);
     }
 
     /**
@@ -92,13 +92,23 @@ public final class CaptureHandler extends Handler {
     private void restartPreviewAndDecode() {
         if (state == State.SUCCESS) {
             state = State.PREVIEW;
-            zxingView.requestPreviewFrame(decodeThread.getHandler(), CameraConstant.decode);
+            zxingView.requestPreviewFrame(decodeThread.getHandler());
         }
     }
 
     private enum State {
+        /**
+         * 在预览
+         */
         PREVIEW,
+
+        /**
+         * 成功
+         */
         SUCCESS,
+        /**
+         * 在解析
+         */
         DONE
     }
 }
